@@ -25,8 +25,8 @@ async function run() {
     await client.connect();
 
     //dataBase, Collection
-    const dataBase = client.db('')
-    const collection = dataBase.collection('')
+    const dataBase = client.db('eTuitionBD')
+    const tuitionPostCollection = dataBase.collection('Tuition_Post')
 
     app.get('/', async(req, res) => {
         
@@ -45,9 +45,10 @@ async function run() {
         })
     })
 
-    app.post('', async(req, res) => {
+    //New Tuition Post
+    app.post('/tuitionPost', async(req, res) => {
         const data = req.body
-        const result = await collection.insertOne(data)
+        const result = await tuitionPostCollection.insertOne(data)
 
         res.send({
             success: true,
