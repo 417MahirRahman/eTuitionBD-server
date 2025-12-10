@@ -1,5 +1,6 @@
 const express = require('express')
 const cors = require('cors')
+const jwt = require('jsonwebtoken');
 require("dotenv").config();
 const app = express()
 const port = 3000
@@ -19,6 +20,27 @@ const client = new MongoClient(uri, {
   }
 });
 
+//Verify JWT Token
+const verifyJWTToken = (req, res, next) => {
+  
+  const authorization = req.headers.authorization;
+  if(!authorization){
+    return res.status(401).send({message: 'Unauthorized Access'})
+  }
+  const token = authorization.split(' ')[1];
+  if(!token){
+    return res.status(401).send({message: 'Unauthorized Access'})
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if(err){
+      return res.status(401).send({message: 'Unauthorized Access'})
+    }
+    req.token_email = decoded.email;
+    next();
+  }) 
+}
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -28,9 +50,17 @@ async function run() {
     const dataBase = client.db('eTuitionBD')
     const tuitionPostCollection = dataBase.collection('Tuition_Post')
 
-    app.get('/', async(req, res) => {
+    //JWT API's
+    app.post('/getToken', (req, res) => {
+      const loggedUser = req.body;
+      const token = jwt.sign(loggedUser, process.env.JWT_SECRET, {expiresIn: '1h'})
+      res.send({token: token})
+    })
+
+    //Get all tuitions
+    app.get('/allTuitions', async(req, res) => {
         
-        const result = await collection.find().toArray()
+        const result = await tuitionPostCollection.find().toArray()
 
         res.send(result)
     })
@@ -45,12 +75,27 @@ async function run() {
         })
     })
 
+    //-----Student Functionalities-----//
     //New Tuition Post
     app.post('/tuitionPost', async(req, res) => {
         const data = req.body
         const result = await tuitionPostCollection.insertOne(data)
 
         res.send({
+            success: true,
+            result
+        })
+    })
+
+    //Delete Tuition Post
+    app.delete('/tuitionPost/:id', async(req, res) => {
+        const {id} = req.params
+        const objectId = new ObjectId(id)
+        const filter = {_id: objectId}
+
+        const result = await collection.deleteOne({filter})
+
+        req.send({
             success: true,
             result
         })
