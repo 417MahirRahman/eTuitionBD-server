@@ -65,9 +65,10 @@ async function run() {
         res.send(result)
     })
 
-    app.get('/demo/:id', async(req, res) => {
+    // Get a specific tuition by ID
+    app.get('/allTuitions/:id', async(req, res) => {
         const {id} = req.params
-        const result = await collection.findOne({_id: new ObjectId(id)}).toArray()
+        const result = await tuitionPostCollection.findOne({_id: new ObjectId(id)})
 
         res.send({
             success: true,
