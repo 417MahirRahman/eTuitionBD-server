@@ -107,16 +107,16 @@ async function run() {
       res.send(result);
     });
 
-    // Get a specific tuition by ID
-    // app.get("/allTuitions/:id", async (req, res) => {
-    //   const { id } = req.params;
-    //   const result = await tuitionPostCollection.findOne({_id: new ObjectId(id)});
+    //Get a specific tuition by ID
+    app.get("/allTuitions/:id", async (req, res) => {
+      const { id } = req.params;
+      const result = await tuitionPostCollection.findOne({_id: new ObjectId(id)});
 
-    //   res.send({
-    //     success: true,
-    //     result,
-    //   });
-    // });
+      res.send({
+        success: true,
+        result,
+      });
+    });
 
     //-----Student Functionalities-----//
     //Get My Tuitions
@@ -185,6 +185,21 @@ async function run() {
     });
 
     //-----Tutor Functionalities-----//
+    //Get My Tuitions
+    app.get("/allTutorApplication/:Email", async (req, res) => {
+      const email = req.params.Email;
+      console.log("email", email);
+      const result = await tutorApplicationCollection
+        .find({ Email: email })
+        .toArray();
+
+      if (result.length === 0) {
+        return res.status(404).send({ message: "No result found" });
+      }
+
+      res.send({ result });
+    });
+
     //Apply for tuition
     app.post("/tutorApplication", verifyJWTToken, async (req, res) => {
       const data = req.body;
