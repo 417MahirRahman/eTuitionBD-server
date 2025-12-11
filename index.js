@@ -365,6 +365,21 @@ async function run() {
         result,
       });
     });
+
+    //Tutor's Revenue History
+    app.get("/tutorRevenue/:Email", verifyJWTToken, async (req, res) => {
+      const email = req.params.Email;
+      console.log("email", email);
+      const result = await paymentHistory
+        .find({ tutorEmail: email })
+        .toArray();
+
+      if (result.length === 0) {
+        return res.status(404).send({ message: "No result found" });
+      }
+
+      res.send({ result });
+    });
     //-----Tutor Functionalities End-----//
 
     app.put("/demo/:id", async (req, res) => {
