@@ -185,8 +185,8 @@ async function run() {
     });
 
     //-----Tutor Functionalities-----//
-    //Get My Tuitions
-    app.get("/allTutorApplication/:Email", async (req, res) => {
+    //Get My Tuitions ok
+    app.get("/tutorApplication/:Email", verifyJWTToken, async (req, res) => {
       const email = req.params.Email;
       console.log("email", email);
       const result = await tutorApplicationCollection
@@ -200,10 +200,23 @@ async function run() {
       res.send({ result });
     });
 
-    //Apply for tuition
+    //Apply for tuition ok
     app.post("/tutorApplication", verifyJWTToken, async (req, res) => {
       const data = req.body;
       const result = await tutorApplicationCollection.insertOne(data);
+
+      res.send({
+        success: true,
+        result,
+      });
+    });
+
+    //Delete My Application 
+    app.delete("/tutorApplication/:id", async (req, res) => {
+      const { id } = req.params;
+      const objectId = new ObjectId(id);
+
+      const result = await tutorApplicationCollection.deleteOne({ _id: objectId });
 
       res.send({
         success: true,
