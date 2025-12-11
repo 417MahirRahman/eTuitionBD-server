@@ -211,6 +211,31 @@ async function run() {
       });
     });
 
+    // Update My-Application Info by ID
+    app.put("/tutorApplication/:id", async (req, res) => {
+      const id = req.params.id;
+
+      const updatedData = JSON.parse(
+        JSON.stringify({
+          Qualification: req.body.Qualification,
+          Experience: req.body.Experience,
+          Expected_Salary: req.body.Expected_Salary,
+        })
+      );
+
+      const result = await tutorApplicationCollection.findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $set: updatedData },
+        { returnDocument: "after" }
+      );
+
+      return res.send({
+        success: true,
+        message: "Your Application info updated successfully",
+        updatedInfo: result.value,
+      });
+    });
+
     //Delete My Application 
     app.delete("/tutorApplication/:id", async (req, res) => {
       const { id } = req.params;
