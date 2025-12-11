@@ -54,7 +54,7 @@ async function run() {
     const tutorApplicationCollection = dataBase.collection(
       "Tutor_Application_Post"
     );
-    const paymentHistory = dataBase.collection("Payment_History")
+    const paymentHistory = dataBase.collection("Payment_History");
 
     //JWT API's
     app.post("/getToken", (req, res) => {
@@ -100,6 +100,43 @@ async function run() {
       }
 
       res.send({ role: user.role });
+    });
+
+    //Get User's Info
+    app.get("/users/:Email", async (req, res) => {
+      const email = req.params.Email;
+      console.log("email", email);
+      const result = await userCollection.findOne({ email: email });
+      if (result.length === 0) {
+        return res.status(404).send({ message: "No result found" });
+      }
+
+      res.send({ result });
+    });
+
+    //Update User's Info
+    app.put("/users/:id", async (req, res) => {
+      const id = req.params.id;
+
+      const updatedData = JSON.parse(
+        JSON.stringify({
+          name: req.body.name,
+          Image_URL: req.body.Image_URL,
+          phoneNumber: req.body.phoneNumber,
+        })
+      );
+
+      const result = await userCollection.findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $set: updatedData },
+        { returnDocument: "after" }
+      );
+
+      return res.send({
+        success: true,
+        message: "Profile updated successfully",
+        updatedInfo: result.value,
+      });
     });
 
     //Get all tuitions
@@ -238,13 +275,16 @@ async function run() {
       const sessionID = req.query.session_id;
       const Session = await stripe.checkout.sessions.retrieve(sessionID);
 
-      const transactionID = Session.payment_intent
-      const filter = {transactionID: transactionID}
+      const transactionID = Session.payment_intent;
+      const filter = { transactionID: transactionID };
 
-      const transactionIDExist = await paymentHistory.findOne(filter)
+      const transactionIDExist = await paymentHistory.findOne(filter);
 
-      if(transactionIDExist){
-        return res.send({message: "Payment history already exist.", transactionID})
+      if (transactionIDExist) {
+        return res.send({
+          message: "Payment history already exist.",
+          transactionID,
+        });
       }
 
       if (Session.payment_status === "paid") {
@@ -274,8 +314,8 @@ async function run() {
       };
 
       if (Session.payment_status === "paid") {
-        const payResult = await paymentHistory.insertOne(paymentInfo)
-        res.send({success: true, payResult})
+        const payResult = await paymentHistory.insertOne(paymentInfo);
+        res.send({ success: true, payResult });
       }
 
       res.send({ message: "Status update failed" });
@@ -299,7 +339,7 @@ async function run() {
     });
 
     //Student Payment History API
-    app.get("/studentPayment/:Email",  async (req, res) => {
+    app.get("/studentPayment/:Email", async (req, res) => {
       const email = req.params.Email;
       console.log("email", email);
       const result = await paymentHistory
@@ -314,8 +354,6 @@ async function run() {
     });
 
     //-----Student Functionalities End-----//
-
-
 
     //-----Tutor Functionalities Start-----//
     //Get My Tuitions ok
@@ -388,9 +426,7 @@ async function run() {
     app.get("/tutorRevenue/:Email", verifyJWTToken, async (req, res) => {
       const email = req.params.Email;
       console.log("email", email);
-      const result = await paymentHistory
-        .find({ tutorEmail: email })
-        .toArray();
+      const result = await paymentHistory.find({ tutorEmail: email }).toArray();
 
       if (result.length === 0) {
         return res.status(404).send({ message: "No result found" });
@@ -399,36 +435,6 @@ async function run() {
       res.send({ result });
     });
     //-----Tutor Functionalities End-----//
-
-    app.put("/demo/:id", async (req, res) => {
-      const { id } = req.params;
-      const data = req.body;
-      const objectId = new ObjectId(id);
-
-      const filter = { _id: objectId };
-      const update = {
-        $set: data,
-      };
-      const result = await collection.updateOne({ filter, update });
-
-      res.send({
-        success: true,
-        result,
-      });
-    });
-
-    app.delete("/demo/id", async (req, res) => {
-      const { id } = req.params;
-      const objectId = new ObjectId(id);
-      const filter = { _id: objectId };
-
-      const result = await collection.deleteOne({ filter });
-
-      req.send({
-        success: true,
-        result,
-      });
-    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
