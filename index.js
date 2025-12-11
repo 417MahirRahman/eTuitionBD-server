@@ -149,11 +149,10 @@ async function run() {
     app.delete("/tuitionPost/:id", async (req, res) => {
       const { id } = req.params;
       const objectId = new ObjectId(id);
-      const filter = { _id: objectId };
 
-      const result = await collection.deleteOne({ filter });
+      const result = await tuitionPostCollection.deleteOne({ _id: objectId });
 
-      req.send({
+      res.send({
         success: true,
         result,
       });
