@@ -297,7 +297,25 @@ async function run() {
         updatedInfo: result.value,
       });
     });
+
+    //Student Payment History API
+    app.get("/studentPayment/:Email",  async (req, res) => {
+      const email = req.params.Email;
+      console.log("email", email);
+      const result = await paymentHistory
+        .find({ studentEmail: email })
+        .toArray();
+
+      if (result.length === 0) {
+        return res.status(404).send({ message: "No result found" });
+      }
+
+      res.send({ result });
+    });
+
     //-----Student Functionalities End-----//
+
+
 
     //-----Tutor Functionalities Start-----//
     //Get My Tuitions ok
