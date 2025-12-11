@@ -201,6 +201,23 @@ async function run() {
       res.send({ result });
     });
 
+    //Reject a Tutor API
+    app.put("/statusUpdate/:id", async (req, res) => {
+      const id = req.params.id;
+
+      const result = await tutorApplicationCollection.findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $set: req.body },
+        { returnDocument: "after" }
+      );
+
+      return res.send({
+        success: true,
+        message: "Status updated successfully",
+        updatedInfo: result.value,
+      });
+    });
+
     //-----Tutor Functionalities-----//
     //Get My Tuitions ok
     app.get("/tutorApplication/:Email", verifyJWTToken, async (req, res) => {
