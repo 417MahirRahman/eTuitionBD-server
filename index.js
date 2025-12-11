@@ -48,6 +48,7 @@ async function run() {
 
     //dataBase, Collection
     const dataBase = client.db("eTuitionBD");
+    const userCollection = dataBase.collection("Users");
     const tuitionPostCollection = dataBase.collection("Tuition_Post");
     const tutorApplicationCollection = dataBase.collection(
       "Tutor_Application_Post"
@@ -55,14 +56,46 @@ async function run() {
 
     //JWT API's
     app.post("/getToken", (req, res) => {
-      const loggedUser = req.body;
-      if (!loggedUser || !loggedUser.email) {
+      const user = req.body;
+
+      if (!user || !user.email) {
         return res.status(400).send({ message: "Invalid user data" });
       }
-      const token = jwt.sign(loggedUser, process.env.JWT_SECRET, {
+      const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET, {
         expiresIn: "1h",
       });
       res.send({ token: token });
+    });
+
+    //Add Users
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const email = user.email
+      const exsistUser = await userCollection.findOne({email})
+      
+      if(exsistUser){
+        return res.send({message: "User already exsist"})
+      }
+
+      const result = await userCollection.insertOne(user);
+
+      res.send({
+        success: true,
+        result,
+      });
+    });
+
+    //Get user role
+    app.get("/users/role/:email", async (req, res) => {
+      const email = req.params.email;
+
+      const user = await userCollection.findOne({ email: { $regex: `^${email}$`, $options: "i" } });
+
+      if (!user) {
+        return res.status(404).send({ message: "User not found" });
+      }
+
+      res.send({ role: user.role });
     });
 
     //Get all tuitions
