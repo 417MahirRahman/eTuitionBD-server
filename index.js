@@ -70,11 +70,11 @@ async function run() {
     //Add Users
     app.post("/users", async (req, res) => {
       const user = req.body;
-      const email = user.email
-      const exsistUser = await userCollection.findOne({email})
-      
-      if(exsistUser){
-        return res.send({message: "User already exsist"})
+      const email = user.email;
+      const exsistUser = await userCollection.findOne({ email });
+
+      if (exsistUser) {
+        return res.send({ message: "User already exsist" });
       }
 
       const result = await userCollection.insertOne(user);
@@ -89,7 +89,9 @@ async function run() {
     app.get("/users/role/:email", async (req, res) => {
       const email = req.params.email;
 
-      const user = await userCollection.findOne({ email: { $regex: `^${email}$`, $options: "i" } });
+      const user = await userCollection.findOne({
+        email: { $regex: `^${email}$`, $options: "i" },
+      });
 
       if (!user) {
         return res.status(404).send({ message: "User not found" });
@@ -106,19 +108,32 @@ async function run() {
     });
 
     // Get a specific tuition by ID
-    app.get("/allTuitions/:id", async (req, res) => {
-      const { id } = req.params;
-      const result = await tuitionPostCollection.findOne({
-        _id: new ObjectId(id),
-      });
+    // app.get("/allTuitions/:id", async (req, res) => {
+    //   const { id } = req.params;
+    //   const result = await tuitionPostCollection.findOne({_id: new ObjectId(id)});
 
-      res.send({
-        success: true,
-        result,
-      });
-    });
+    //   res.send({
+    //     success: true,
+    //     result,
+    //   });
+    // });
 
     //-----Student Functionalities-----//
+    //My Tuitions
+    app.get("/allTuitions/:Email", async (req, res) => {
+      const email = req.params.Email;
+      //console.log("email", email);
+      const result = await tuitionPostCollection
+        .find({ Email: email })
+        .toArray();
+
+      if (result.length === 0) {
+        return res.status(404).send({ message: "No result found" });
+      }
+
+      res.send({ result });
+    });
+
     //New Tuition Post
     app.post("/tuitionPost", verifyJWTToken, async (req, res) => {
       const data = req.body;
