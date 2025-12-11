@@ -119,7 +119,7 @@ async function run() {
     // });
 
     //-----Student Functionalities-----//
-    //My Tuitions
+    //Get My Tuitions
     app.get("/allTuitions/:Email", async (req, res) => {
       const email = req.params.Email;
       //console.log("email", email);
@@ -134,7 +134,7 @@ async function run() {
       res.send({ result });
     });
 
-    //New Tuition Post
+    //Post New Tuition
     app.post("/tuitionPost", verifyJWTToken, async (req, res) => {
       const data = req.body;
       const result = await tuitionPostCollection.insertOne(data);
@@ -142,6 +142,32 @@ async function run() {
       res.send({
         success: true,
         result,
+      });
+    });
+
+    // Update My-Tuitions Info by ID
+    app.put("/tuitionPost/:id", async (req, res) => {
+      const id = req.params.id;
+
+      const updatedData = JSON.parse(
+        JSON.stringify({
+          Class: req.body.Class,
+          Subjects: req.body.Subjects,
+          Budget: req.body.Budget,
+          Location: req.body.Location,
+        })
+      );
+
+      const result = await tuitionPostCollection.findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $set: updatedData },
+        { returnDocument: "after" }
+      );
+
+      return res.send({
+        success: true,
+        message: "Tuition info updated successfully",
+        updatedInfo: result.value,
       });
     });
 
