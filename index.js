@@ -110,7 +110,9 @@ async function run() {
     //Get a specific tuition by ID
     app.get("/allTuitions/:id", async (req, res) => {
       const { id } = req.params;
-      const result = await tuitionPostCollection.findOne({_id: new ObjectId(id)});
+      const result = await tuitionPostCollection.findOne({
+        _id: new ObjectId(id),
+      });
 
       res.send({
         success: true,
@@ -184,6 +186,21 @@ async function run() {
       });
     });
 
+    //Get Tutor's Application for my Tuition Post
+    app.get("/tuitionApplication/:Email", async (req, res) => {
+      const email = req.params.Email;
+      console.log("email", email);
+      const result = await tutorApplicationCollection
+        .find({ studentEmail: email })
+        .toArray();
+
+      if (result.length === 0) {
+        return res.status(404).send({ message: "No result found" });
+      }
+
+      res.send({ result });
+    });
+
     //-----Tutor Functionalities-----//
     //Get My Tuitions ok
     app.get("/tutorApplication/:Email", verifyJWTToken, async (req, res) => {
@@ -236,12 +253,14 @@ async function run() {
       });
     });
 
-    //Delete My Application 
+    //Delete My Application
     app.delete("/tutorApplication/:id", async (req, res) => {
       const { id } = req.params;
       const objectId = new ObjectId(id);
 
-      const result = await tutorApplicationCollection.deleteOne({ _id: objectId });
+      const result = await tutorApplicationCollection.deleteOne({
+        _id: objectId,
+      });
 
       res.send({
         success: true,
