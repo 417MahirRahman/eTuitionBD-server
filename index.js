@@ -1,9 +1,10 @@
 const express = require("express");
 const cors = require("cors");
-const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const app = express();
 const port = 3000;
+const jwt = require("jsonwebtoken");
+const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
 app.use(cors());
 app.use(express.json());
@@ -53,6 +54,7 @@ async function run() {
     const tutorApplicationCollection = dataBase.collection(
       "Tutor_Application_Post"
     );
+    const paymentHistory = dataBase.collection("Payment_History")
 
     //JWT API's
     app.post("/getToken", (req, res) => {
@@ -120,7 +122,7 @@ async function run() {
       });
     });
 
-    //-----Student Functionalities-----//
+    //-----Student Functionalities Start-----//
     //Get My Tuitions
     app.get("/allTuitions/:Email", async (req, res) => {
       const email = req.params.Email;
@@ -201,6 +203,84 @@ async function run() {
       res.send({ result });
     });
 
+    //Payment API
+    app.post("/create-checkout-session", async (req, res) => {
+      const paymentInfo = req.body;
+      console.log(paymentInfo);
+      const session = await stripe.checkout.sessions.create({
+        line_items: [
+          {
+            price_data: {
+              currency: "USD",
+              product_data: {
+                name: "Tuition-Fee",
+              },
+              unit_amount: paymentInfo?.tutorSalary * 100,
+            },
+            quantity: 1,
+          },
+        ],
+        mode: "payment",
+        customer_email: paymentInfo?.studentEmail,
+        metadata: {
+          studentEmail: paymentInfo?.studentEmail,
+          studentID: paymentInfo?.studentID,
+          tutorID: paymentInfo?.tutorID,
+          tutorEmail: paymentInfo?.tutorEmail,
+        },
+        success_url: `${process.env.CLIENT_SITE}/dashboard/paymentSuccess?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.CLIENT_SITE}/dashboard/appliedTutors`,
+      });
+      res.send({ url: session.url });
+    });
+
+    app.put("/paymentSuccess", async (req, res) => {
+      const sessionID = req.query.session_id;
+      const Session = await stripe.checkout.sessions.retrieve(sessionID);
+
+      const transactionID = Session.payment_intent
+      const filter = {transactionID: transactionID}
+
+      const transactionIDExist = await paymentHistory.findOne(filter)
+
+      if(transactionIDExist){
+        return res.send({message: "Payment history already exist.", transactionID})
+      }
+
+      if (Session.payment_status === "paid") {
+        const id = Session.metadata.tutorID;
+        const filter = { _id: new ObjectId(id) };
+        const updateStatus = {
+          $set: {
+            Status: "Approved",
+          },
+        };
+        const result = await tutorApplicationCollection.updateOne(
+          filter,
+          updateStatus
+        );
+        res.send(result);
+      }
+
+      const paymentInfo = {
+        Amount: Session.amount_total / 100,
+        transactionID: transactionID,
+        paymentStatus: Session.payment_status,
+        studentID: Session.metadata.studentID,
+        studentEmail: Session.metadata.studentEmail,
+        tutorID: Session.metadata.tutorID,
+        tutorEmail: Session.metadata.tutorEmail,
+        paidTime: new Date(),
+      };
+
+      if (Session.payment_status === "paid") {
+        const payResult = await paymentHistory.insertOne(paymentInfo)
+        res.send({success: true, payResult})
+      }
+
+      res.send({ message: "Status update failed" });
+    });
+
     //Reject a Tutor API
     app.put("/statusUpdate/:id", async (req, res) => {
       const id = req.params.id;
@@ -217,8 +297,9 @@ async function run() {
         updatedInfo: result.value,
       });
     });
+    //-----Student Functionalities End-----//
 
-    //-----Tutor Functionalities-----//
+    //-----Tutor Functionalities Start-----//
     //Get My Tuitions ok
     app.get("/tutorApplication/:Email", verifyJWTToken, async (req, res) => {
       const email = req.params.Email;
@@ -284,6 +365,7 @@ async function run() {
         result,
       });
     });
+    //-----Tutor Functionalities End-----//
 
     app.put("/demo/:id", async (req, res) => {
       const { id } = req.params;
