@@ -167,6 +167,19 @@ async function run() {
       res.send(result);
     });
 
+    //Delete User from the Database
+    app.delete("/allUsers/:id", async (req, res) => {
+      const { id } = req.params;
+      const objectId = new ObjectId(id);
+
+      const result = await userCollection.deleteOne({ _id: objectId });
+
+      res.send({
+        success: true,
+        result,
+      });
+    });
+
     //-----Student Functionalities Start-----//
     //Get My Tuitions
     app.get("/tuitions/:email", async (req, res) => {
