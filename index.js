@@ -92,7 +92,7 @@ async function run() {
       const email = req.params.email;
 
       const user = await userCollection.findOne({
-        email: { $regex: `^${email}$`, $options: "i" },
+        email: email.toLowerCase() || email.toUpperCase(),
       });
 
       if (!user) {
@@ -102,12 +102,12 @@ async function run() {
       res.send({ role: user.role });
     });
 
-    //Get User's Info
-    app.get("/users/:Email", async (req, res) => {
-      const email = req.params.Email;
+    //Get User's Info by email
+    app.get("/users/:email", async (req, res) => {
+      const email = req.params.email;
       console.log("email", email);
-      const result = await userCollection.findOne({ email: email });
-      if (result.length === 0) {
+      const result = await userCollection.findOne({ email: email.toLowerCase() || email.toUpperCase() });
+      if (!result) {
         return res.status(404).send({ message: "No result found" });
       }
 
@@ -159,13 +159,21 @@ async function run() {
       });
     });
 
+    //-----Admin Functionalities Start-----//
+    //Get all User's info
+    app.get("/allUsers", async (req, res) => {
+      const result = await userCollection.find().toArray();
+
+      res.send(result);
+    });
+
     //-----Student Functionalities Start-----//
     //Get My Tuitions
-    app.get("/allTuitions/:Email", async (req, res) => {
-      const email = req.params.Email;
-      //console.log("email", email);
+    app.get("/tuitions/:email", async (req, res) => {
+      const email = req.params.email;
+      console.log("email", email);
       const result = await tuitionPostCollection
-        .find({ Email: email })
+        .find({ Email: email.toLowerCase() || email.toUpperCase() })
         .toArray();
 
       if (result.length === 0) {
@@ -226,11 +234,11 @@ async function run() {
     });
 
     //Get Tutor's Application for my Tuition Post
-    app.get("/tuitionApplication/:Email", async (req, res) => {
-      const email = req.params.Email;
+    app.get("/tuitionApplication/:email", async (req, res) => {
+      const email = req.params.email;
       console.log("email", email);
       const result = await tutorApplicationCollection
-        .find({ studentEmail: email })
+        .find({ studentEmail: email.toLowerCase() || email.toUpperCase() })
         .toArray();
 
       if (result.length === 0) {
@@ -339,11 +347,11 @@ async function run() {
     });
 
     //Student Payment History API
-    app.get("/studentPayment/:Email", async (req, res) => {
-      const email = req.params.Email;
+    app.get("/studentPayment/:email", async (req, res) => {
+      const email = req.params.email;
       console.log("email", email);
       const result = await paymentHistory
-        .find({ studentEmail: email })
+        .find({ studentEmail: email.toLowerCase() || email.toUpperCase() })
         .toArray();
 
       if (result.length === 0) {
@@ -357,11 +365,11 @@ async function run() {
 
     //-----Tutor Functionalities Start-----//
     //Get My Tuitions ok
-    app.get("/tutorApplication/:Email", verifyJWTToken, async (req, res) => {
-      const email = req.params.Email;
+    app.get("/tutorApplication/:email", verifyJWTToken, async (req, res) => {
+      const email = req.params.email;
       console.log("email", email);
       const result = await tutorApplicationCollection
-        .find({ Email: email })
+        .find({ Email: email.toLowerCase() || email.toUpperCase() })
         .toArray();
 
       if (result.length === 0) {
@@ -423,10 +431,10 @@ async function run() {
     });
 
     //Tutor's Revenue History
-    app.get("/tutorRevenue/:Email", verifyJWTToken, async (req, res) => {
-      const email = req.params.Email;
+    app.get("/tutorRevenue/:email", verifyJWTToken, async (req, res) => {
+      const email = req.params.email;
       console.log("email", email);
-      const result = await paymentHistory.find({ tutorEmail: email }).toArray();
+      const result = await paymentHistory.find({ tutorEmail: email.toLowerCase() || email.toUpperCase() }).toArray();
 
       if (result.length === 0) {
         return res.status(404).send({ message: "No result found" });
