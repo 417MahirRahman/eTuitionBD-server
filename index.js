@@ -21,6 +21,7 @@ const client = new MongoClient(uri, {
   },
 });
 
+//Middleware
 //Verify JWT Token
 const verifyJWTToken = (req, res, next) => {
   const authorization = req.headers.authorization;
@@ -69,13 +70,57 @@ async function run() {
       res.send({ token: token });
     });
 
+    // Role Based Middleware
+    //Admin
+    const verifyADMIN = async (req, res, next) => {
+      const email = req.user.email;
+      const user = await userCollection.findOne({ email });
+      console.log("email:", email);
+      console.log("User:", user);
+      if (user?.role !== "admin")
+        return res.send({
+          message: "You have no permission to access this page. Only Admin has the access",
+        });
+
+      next();
+    };
+
+    //Student
+    const verifyStudent = async (req, res, next) => {
+      const email = req.user.email;
+      const user = await userCollection.findOne({ email });
+      console.log("email:", email);
+      console.log("User:", user);
+      if (user?.role !== "student")
+        return res.send({
+          message: "You have no permission to access this page. Only Student has the access",
+        });
+
+      next();
+    };
+
+    //Tutor
+    const verifyTutor = async (req, res, next) => {
+      const email = req.user.email;
+      const user = await userCollection.findOne({ email });
+      console.log("email:", email);
+      console.log("User:", user);
+      if (user?.role !== "tutor")
+        return res.send({
+          message: "You have no permission to access this page. Only Tutor has the access",
+        });
+
+      next();
+    };
+
+    // ------------\\
     //Add Users
     app.post("/users", async (req, res) => {
       const user = req.body;
       const email = user.email;
-      const exsistUser = await userCollection.findOne({ email });
+      const existUser = await userCollection.findOne({ email });
 
-      if (exsistUser) {
+      if (existUser) {
         return res.send({ message: "User already exsist" });
       }
 
@@ -88,7 +133,7 @@ async function run() {
     });
 
     //Get user role
-    app.get("/users/role/:email", async (req, res) => {
+    app.get("/users/role/:email", verifyJWTToken, async (req, res) => {
       const email = req.params.email;
 
       const user = await userCollection.findOne({
@@ -103,7 +148,7 @@ async function run() {
     });
 
     //Get User's Info by email
-    app.get("/users/:email", async (req, res) => {
+    app.get("/users/:email", verifyJWTToken, async (req, res) => {
       const email = req.params.email;
       console.log("email", email);
       const result = await userCollection.findOne({
@@ -117,7 +162,7 @@ async function run() {
     });
 
     //Update User's Info (for-Users) working
-    app.put("/users/:id", async (req, res) => {
+    app.put("/users/:id", verifyJWTToken, async (req, res) => {
       const id = req.params.id;
 
       const updatedData = JSON.parse(
@@ -143,14 +188,30 @@ async function run() {
 
     //Get all tuitions
     app.get("/allTuitions", async (req, res) => {
+      const { limit = 0, skip = 0, order = "-1", search = "" } = req.query;
+      const query = {
+        $or: [
+          { Class: { $regex: search, $options: "i" } },
+          { Location: { $regex: search, $options: "i" } },
+        ],
+      };
 
-      const {limit = 0, skip = 0} = req.query
+      const result = await tuitionPostCollection
+        .find({
+          ...query,
+          Status: "Approved",
+        })
+        .sort({ Budget: Number(order) })
+        .limit(Number(limit))
+        .skip(Number(skip))
+        .toArray();
 
-      const result = await tuitionPostCollection.find().limit(Number(limit)).skip(Number(skip)).toArray();
+      const count = await tuitionPostCollection.countDocuments({
+        ...query,
+        Status: "Approved",
+      });
 
-      const count = await tuitionPostCollection.countDocuments()
-
-      res.send({result, total: count});
+      res.send({ result, total: count });
     });
 
     //Get a specific tuition by ID
@@ -168,28 +229,28 @@ async function run() {
 
     //-----Admin Functionalities Start-----//
     //Get all User's info
-    app.get("/allUsers", async (req, res) => {
+    app.get("/allUsers", verifyJWTToken, verifyADMIN, async (req, res) => {
       const result = await userCollection.find().toArray();
 
       res.send(result);
     });
 
     //Get all Tuition-Post info
-    app.get("/allTuitionPost", async (req, res) => {
+    app.get("/allTuitionPost", verifyJWTToken, verifyADMIN, async (req, res) => {
       const result = await tuitionPostCollection.find().toArray();
 
       res.send(result);
     });
 
     //Get all Payment info
-    app.get("/allPaymentInfo", async (req, res) => {
+    app.get("/allPaymentInfo", verifyJWTToken, verifyADMIN, async (req, res) => {
       const result = await paymentHistory.find().toArray();
 
       res.send(result);
     });
 
     //Update Tuition Post Status
-    app.put("/postStatusUpdate/:id", async (req, res) => {
+    app.put("/postStatusUpdate/:id", verifyJWTToken, verifyADMIN, async (req, res) => {
       const id = req.params.id;
 
       const result = await tuitionPostCollection.findOneAndUpdate(
@@ -206,7 +267,7 @@ async function run() {
     });
 
     //Update User's Info (for-Admin)
-    app.put("/updateUsers/:id", async (req, res) => {
+    app.put("/updateUsers/:id", verifyJWTToken, verifyADMIN, async (req, res) => {
       const id = req.params.id;
 
       const updatedData = {
@@ -224,7 +285,7 @@ async function run() {
         { returnDocument: "after" }
       );
 
-      console.log("result:", result)
+      console.log("result:", result);
 
       return res.send({
         success: true,
@@ -234,7 +295,7 @@ async function run() {
     });
 
     //Delete User from the Database
-    app.delete("/allUsers/:id", async (req, res) => {
+    app.delete("/allUsers/:id", verifyJWTToken, verifyADMIN, async (req, res) => {
       const { id } = req.params;
       const objectId = new ObjectId(id);
 
@@ -245,27 +306,25 @@ async function run() {
         result,
       });
     });
-
     //-----Admin Functionalities End-----//
 
     //-----Student Functionalities Start-----//
     //Get My Tuitions
-    app.get("/tuitions/:email", async (req, res) => {
+    app.get("/tuitions/:email", verifyJWTToken, verifyStudent, async (req, res) => {
       const email = req.params.email;
       console.log("email", email);
       const result = await tuitionPostCollection
-        .find({ Email: email.toLowerCase() || email.toUpperCase() })
+        .find({
+          Email: email.toLowerCase() || email.toUpperCase(),
+          Status: "Approved",
+        })
         .toArray();
-
-      if (result.length === 0) {
-        return res.status(404).send({ message: "No result found" });
-      }
 
       res.send({ result });
     });
 
     //Post New Tuition
-    app.post("/tuitionPost", verifyJWTToken, async (req, res) => {
+    app.post("/tuitionPost", verifyJWTToken, verifyStudent, async (req, res) => {
       const data = req.body;
       const result = await tuitionPostCollection.insertOne(data);
 
@@ -276,7 +335,7 @@ async function run() {
     });
 
     // Update My-Tuitions Info by ID problem
-    app.put("/tuitionPost/:id", async (req, res) => {
+    app.put("/tuitionPost/:id", verifyJWTToken, verifyStudent, async (req, res) => {
       const id = req.params.id;
 
       const updatedData = JSON.parse(
@@ -302,7 +361,7 @@ async function run() {
     });
 
     //Delete Tuition Post
-    app.delete("/tuitionPost/:id", async (req, res) => {
+    app.delete("/tuitionPost/:id", verifyJWTToken, verifyStudent, async (req, res) => {
       const { id } = req.params;
       const objectId = new ObjectId(id);
 
@@ -315,16 +374,12 @@ async function run() {
     });
 
     //Get Tutor's Application for my Tuition Post
-    app.get("/tuitionApplication/:email", async (req, res) => {
+    app.get("/tuitionApplication/:email", verifyJWTToken, verifyStudent, async (req, res) => {
       const email = req.params.email;
       console.log("email", email);
       const result = await tutorApplicationCollection
         .find({ studentEmail: email.toLowerCase() || email.toUpperCase() })
         .toArray();
-
-      if (result.length === 0) {
-        return res.status(404).send({ message: "No result found" });
-      }
 
       res.send({ result });
     });
@@ -411,7 +466,7 @@ async function run() {
     });
 
     //Reject a Tutor API working
-    app.put("/statusUpdate/:id", async (req, res) => {
+    app.put("/statusUpdate/:id", verifyJWTToken, verifyStudent, async (req, res) => {
       const id = req.params.id;
 
       const result = await tutorApplicationCollection.findOneAndUpdate(
@@ -428,40 +483,31 @@ async function run() {
     });
 
     //Student Payment History API
-    app.get("/studentPayment/:email", async (req, res) => {
+    app.get("/studentPayment/:email", verifyJWTToken, verifyStudent, async (req, res) => {
       const email = req.params.email;
       console.log("email", email);
       const result = await paymentHistory
         .find({ studentEmail: email.toLowerCase() || email.toUpperCase() })
         .toArray();
 
-      if (result.length === 0) {
-        return res.status(404).send({ message: "No result found" });
-      }
-
       res.send({ result });
     });
-
     //-----Student Functionalities End-----//
 
     //-----Tutor Functionalities Start-----//
-    //Get My Tuitions ok
-    app.get("/tutorApplication/:email", verifyJWTToken, async (req, res) => {
+    //Get My Tuitions
+    app.get("/tutorApplication/:email", verifyJWTToken, verifyTutor, async (req, res) => {
       const email = req.params.email;
       console.log("email", email);
       const result = await tutorApplicationCollection
         .find({ Email: email.toLowerCase() || email.toUpperCase() })
         .toArray();
 
-      if (result.length === 0) {
-        return res.status(404).send({ message: "No result found" });
-      }
-
       res.send({ result });
     });
 
-    //Apply for tuition ok
-    app.post("/tutorApplication", verifyJWTToken, async (req, res) => {
+    //Apply for tuition
+    app.post("/tutorApplication", verifyJWTToken, verifyTutor, async (req, res) => {
       const data = req.body;
       const result = await tutorApplicationCollection.insertOne(data);
 
@@ -472,7 +518,7 @@ async function run() {
     });
 
     // Update My-Application Info by ID
-    app.put("/tutorApplication/:id", async (req, res) => {
+    app.put("/tutorApplication/:id", verifyJWTToken, verifyTutor, async (req, res) => {
       const id = req.params.id;
 
       const updatedData = JSON.parse(
@@ -497,7 +543,7 @@ async function run() {
     });
 
     //Delete My Application
-    app.delete("/tutorApplication/:id", async (req, res) => {
+    app.delete("/tutorApplication/:id", verifyJWTToken, verifyTutor, async (req, res) => {
       const { id } = req.params;
       const objectId = new ObjectId(id);
 
@@ -512,7 +558,7 @@ async function run() {
     });
 
     //Tutor's Revenue History
-    app.get("/tutorRevenue/:email", verifyJWTToken, async (req, res) => {
+    app.get("/tutorRevenue/:email", verifyJWTToken, verifyTutor, async (req, res) => {
       const email = req.params.email;
       console.log("email", email);
       const result = await paymentHistory
