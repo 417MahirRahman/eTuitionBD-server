@@ -143,9 +143,14 @@ async function run() {
 
     //Get all tuitions
     app.get("/allTuitions", async (req, res) => {
-      const result = await tuitionPostCollection.find().toArray();
 
-      res.send(result);
+      const {limit = 0, skip = 0} = req.query
+
+      const result = await tuitionPostCollection.find().limit(Number(limit)).skip(Number(skip)).toArray();
+
+      const count = await tuitionPostCollection.countDocuments()
+
+      res.send({result, total: count});
     });
 
     //Get a specific tuition by ID
@@ -172,6 +177,13 @@ async function run() {
     //Get all Tuition-Post info
     app.get("/allTuitionPost", async (req, res) => {
       const result = await tuitionPostCollection.find().toArray();
+
+      res.send(result);
+    });
+
+    //Get all Payment info
+    app.get("/allPaymentInfo", async (req, res) => {
+      const result = await paymentHistory.find().toArray();
 
       res.send(result);
     });
@@ -233,6 +245,8 @@ async function run() {
         result,
       });
     });
+
+    //-----Admin Functionalities End-----//
 
     //-----Student Functionalities Start-----//
     //Get My Tuitions
