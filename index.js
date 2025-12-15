@@ -106,7 +106,9 @@ async function run() {
     app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
       console.log("email", email);
-      const result = await userCollection.findOne({ email: email.toLowerCase() || email.toUpperCase() });
+      const result = await userCollection.findOne({
+        email: email.toLowerCase() || email.toUpperCase(),
+      });
       if (!result) {
         return res.status(404).send({ message: "No result found" });
       }
@@ -114,7 +116,7 @@ async function run() {
       res.send({ result });
     });
 
-    //Update User's Info
+    //Update User's Info (for-Users) working
     app.put("/users/:id", async (req, res) => {
       const id = req.params.id;
 
@@ -167,6 +169,34 @@ async function run() {
       res.send(result);
     });
 
+    //Update User's Info (for-Admin)
+    app.put("/updateUsers/:id", async (req, res) => {
+      const id = req.params.id;
+
+      const updatedData = {
+        name: req.body.name,
+        role: req.body.role,
+        Image_URL: req.body.Image_URL,
+        phoneNumber: req.body.phoneNumber,
+      };
+
+      console.log(updatedData);
+
+      const result = await userCollection.findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $set: updatedData },
+        { returnDocument: "after" }
+      );
+
+      console.log("result:", result)
+
+      return res.send({
+        success: true,
+        message: "Profile updated successfully",
+        updatedInfo: result,
+      });
+    });
+
     //Delete User from the Database
     app.delete("/allUsers/:id", async (req, res) => {
       const { id } = req.params;
@@ -207,7 +237,7 @@ async function run() {
       });
     });
 
-    // Update My-Tuitions Info by ID
+    // Update My-Tuitions Info by ID problem
     app.put("/tuitionPost/:id", async (req, res) => {
       const id = req.params.id;
 
@@ -342,7 +372,7 @@ async function run() {
       res.send({ message: "Status update failed" });
     });
 
-    //Reject a Tutor API
+    //Reject a Tutor API working
     app.put("/statusUpdate/:id", async (req, res) => {
       const id = req.params.id;
 
@@ -447,7 +477,9 @@ async function run() {
     app.get("/tutorRevenue/:email", verifyJWTToken, async (req, res) => {
       const email = req.params.email;
       console.log("email", email);
-      const result = await paymentHistory.find({ tutorEmail: email.toLowerCase() || email.toUpperCase() }).toArray();
+      const result = await paymentHistory
+        .find({ tutorEmail: email.toLowerCase() || email.toUpperCase() })
+        .toArray();
 
       if (result.length === 0) {
         return res.status(404).send({ message: "No result found" });
