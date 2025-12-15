@@ -169,6 +169,30 @@ async function run() {
       res.send(result);
     });
 
+    //Get all Tuition-Post info
+    app.get("/allTuitionPost", async (req, res) => {
+      const result = await tuitionPostCollection.find().toArray();
+
+      res.send(result);
+    });
+
+    //Update Tuition Post Status
+    app.put("/postStatusUpdate/:id", async (req, res) => {
+      const id = req.params.id;
+
+      const result = await tuitionPostCollection.findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $set: req.body },
+        { returnDocument: "after" }
+      );
+
+      return res.send({
+        success: true,
+        message: "Status updated successfully",
+        updatedInfo: result.value,
+      });
+    });
+
     //Update User's Info (for-Admin)
     app.put("/updateUsers/:id", async (req, res) => {
       const id = req.params.id;
