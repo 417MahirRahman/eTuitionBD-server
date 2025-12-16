@@ -227,6 +227,36 @@ async function run() {
       });
     });
 
+    //All-Tutor
+    app.get("/dynamicTutorPost/:role", async (req, res) => {
+      const role = req.params
+      //console.log("role:", role)
+      const result = await userCollection
+        .find(role)
+        .toArray();
+      res.send(result);
+    });
+
+    //Dynamic-Tuition Post
+    app.get("/dynamicTuitionPost", async (req, res) => {
+      const result = await tuitionPostCollection
+        .find()
+        .limit(6)
+        .toArray();
+      res.send(result);
+    });
+
+    //Dynamic-Tutor
+    app.get("/dynamicTutorPost/:role", async (req, res) => {
+      const role = req.params
+      console.log("role:", role)
+      const result = await userCollection
+        .find(role)
+        .limit(6)
+        .toArray();
+      res.send(result);
+    });
+
     //-----Admin Functionalities Start-----//
     //Get all User's info
     app.get("/allUsers", verifyJWTToken, verifyADMIN, async (req, res) => {
