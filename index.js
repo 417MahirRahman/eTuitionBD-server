@@ -79,7 +79,8 @@ async function run() {
       console.log("User:", user);
       if (user?.role !== "admin")
         return res.send({
-          message: "You have no permission to access this page. Only Admin has the access",
+          message:
+            "You have no permission to access this page. Only Admin has the access",
         });
 
       next();
@@ -93,7 +94,8 @@ async function run() {
       console.log("User:", user);
       if (user?.role !== "student")
         return res.send({
-          message: "You have no permission to access this page. Only Student has the access",
+          message:
+            "You have no permission to access this page. Only Student has the access",
         });
 
       next();
@@ -107,7 +109,8 @@ async function run() {
       console.log("User:", user);
       if (user?.role !== "tutor")
         return res.send({
-          message: "You have no permission to access this page. Only Tutor has the access",
+          message:
+            "You have no permission to access this page. Only Tutor has the access",
         });
 
       next();
@@ -188,26 +191,62 @@ async function run() {
 
     //Get all tuitions
     app.get("/allTuitions", async (req, res) => {
-      const { limit = 0, skip = 0, order = "-1", search = "" } = req.query;
-      const query = {
+      const {
+        grade,
+        subject,
+        location,
+        limit = 0,
+        skip = 0,
+        sort = "budget_desc",
+        search = "",
+      } = req.query;
+
+      //Sort
+      let sortQuery = {};
+
+      if (sort === "budget_desc") {
+        sortQuery = { Budget: -1 };
+      } else if (sort === "budget_asc") {
+        sortQuery = { Budget: 1 };
+      } else if (sort === "date_desc") {
+        sortQuery = { Date: -1 };
+      } else {
+        sortQuery = { Date: 1 };
+      }
+
+      //Filter
+      const filterQuery = {
         $or: [
           { Class: { $regex: search, $options: "i" } },
           { Location: { $regex: search, $options: "i" } },
+          { Subjects: { $regex: search, $options: "i" } },
         ],
       };
 
+      if (grade) {
+        filterQuery.Class = grade;
+      }
+
+      if (subject) {
+        filterQuery.Subjects = { $regex: subject, $options: "i" };
+      }
+
+      if (location) {
+        filterQuery.Location = location;
+      }
+
       const result = await tuitionPostCollection
         .find({
-          ...query,
+          ...filterQuery,
           Status: "Approved",
         })
-        .sort({ Budget: Number(order) })
+        .sort(sortQuery)
         .limit(Number(limit))
         .skip(Number(skip))
         .toArray();
 
       const count = await tuitionPostCollection.countDocuments({
-        ...query,
+        ...filterQuery,
         Status: "Approved",
       });
 
@@ -228,32 +267,24 @@ async function run() {
     });
 
     //All-Tutor
-    app.get("/dynamicTutorPost/:role", async (req, res) => {
-      const role = req.params
+    app.get("/allTutorPost/:role", async (req, res) => {
+      const role = req.params;
       //console.log("role:", role)
-      const result = await userCollection
-        .find(role)
-        .toArray();
+      const result = await userCollection.find(role).toArray();
       res.send(result);
     });
 
     //Dynamic-Tuition Post
     app.get("/dynamicTuitionPost", async (req, res) => {
-      const result = await tuitionPostCollection
-        .find()
-        .limit(6)
-        .toArray();
+      const result = await tuitionPostCollection.find().limit(6).toArray();
       res.send(result);
     });
 
     //Dynamic-Tutor
     app.get("/dynamicTutorPost/:role", async (req, res) => {
-      const role = req.params
-      console.log("role:", role)
-      const result = await userCollection
-        .find(role)
-        .limit(6)
-        .toArray();
+      const role = req.params;
+      console.log("role:", role);
+      const result = await userCollection.find(role).limit(6).toArray();
       res.send(result);
     });
 
@@ -266,153 +297,203 @@ async function run() {
     });
 
     //Get all Tuition-Post info
-    app.get("/allTuitionPost", verifyJWTToken, verifyADMIN, async (req, res) => {
-      const result = await tuitionPostCollection.find().toArray();
+    app.get(
+      "/allTuitionPost",
+      verifyJWTToken,
+      verifyADMIN,
+      async (req, res) => {
+        const result = await tuitionPostCollection.find().toArray();
 
-      res.send(result);
-    });
+        res.send(result);
+      }
+    );
 
     //Get all Payment info
-    app.get("/allPaymentInfo", verifyJWTToken, verifyADMIN, async (req, res) => {
-      const result = await paymentHistory.find().toArray();
+    app.get(
+      "/allPaymentInfo",
+      verifyJWTToken,
+      verifyADMIN,
+      async (req, res) => {
+        const result = await paymentHistory.find().toArray();
 
-      res.send(result);
-    });
+        res.send(result);
+      }
+    );
 
     //Update Tuition Post Status
-    app.put("/postStatusUpdate/:id", verifyJWTToken, verifyADMIN, async (req, res) => {
-      const id = req.params.id;
+    app.put(
+      "/postStatusUpdate/:id",
+      verifyJWTToken,
+      verifyADMIN,
+      async (req, res) => {
+        const id = req.params.id;
 
-      const result = await tuitionPostCollection.findOneAndUpdate(
-        { _id: new ObjectId(id) },
-        { $set: req.body },
-        { returnDocument: "after" }
-      );
+        const result = await tuitionPostCollection.findOneAndUpdate(
+          { _id: new ObjectId(id) },
+          { $set: req.body },
+          { returnDocument: "after" }
+        );
 
-      return res.send({
-        success: true,
-        message: "Status updated successfully",
-        updatedInfo: result.value,
-      });
-    });
+        return res.send({
+          success: true,
+          message: "Status updated successfully",
+          updatedInfo: result.value,
+        });
+      }
+    );
 
     //Update User's Info (for-Admin)
-    app.put("/updateUsers/:id", verifyJWTToken, verifyADMIN, async (req, res) => {
-      const id = req.params.id;
+    app.put(
+      "/updateUsers/:id",
+      verifyJWTToken,
+      verifyADMIN,
+      async (req, res) => {
+        const id = req.params.id;
 
-      const updatedData = {
-        name: req.body.name,
-        role: req.body.role,
-        Image_URL: req.body.Image_URL,
-        phoneNumber: req.body.phoneNumber,
-      };
+        const updatedData = {
+          name: req.body.name,
+          role: req.body.role,
+          Image_URL: req.body.Image_URL,
+          phoneNumber: req.body.phoneNumber,
+        };
 
-      console.log(updatedData);
+        console.log(updatedData);
 
-      const result = await userCollection.findOneAndUpdate(
-        { _id: new ObjectId(id) },
-        { $set: updatedData },
-        { returnDocument: "after" }
-      );
+        const result = await userCollection.findOneAndUpdate(
+          { _id: new ObjectId(id) },
+          { $set: updatedData },
+          { returnDocument: "after" }
+        );
 
-      console.log("result:", result);
+        console.log("result:", result);
 
-      return res.send({
-        success: true,
-        message: "Profile updated successfully",
-        updatedInfo: result,
-      });
-    });
+        return res.send({
+          success: true,
+          message: "Profile updated successfully",
+          updatedInfo: result,
+        });
+      }
+    );
 
     //Delete User from the Database
-    app.delete("/allUsers/:id", verifyJWTToken, verifyADMIN, async (req, res) => {
-      const { id } = req.params;
-      const objectId = new ObjectId(id);
+    app.delete(
+      "/allUsers/:id",
+      verifyJWTToken,
+      verifyADMIN,
+      async (req, res) => {
+        const { id } = req.params;
+        const objectId = new ObjectId(id);
 
-      const result = await userCollection.deleteOne({ _id: objectId });
+        const result = await userCollection.deleteOne({ _id: objectId });
 
-      res.send({
-        success: true,
-        result,
-      });
-    });
+        res.send({
+          success: true,
+          result,
+        });
+      }
+    );
     //-----Admin Functionalities End-----//
 
     //-----Student Functionalities Start-----//
     //Get My Tuitions
-    app.get("/tuitions/:email", verifyJWTToken, verifyStudent, async (req, res) => {
-      const email = req.params.email;
-      console.log("email", email);
-      const result = await tuitionPostCollection
-        .find({
-          Email: email.toLowerCase() || email.toUpperCase(),
-          Status: "Approved",
-        })
-        .toArray();
+    app.get(
+      "/tuitions/:email",
+      verifyJWTToken,
+      verifyStudent,
+      async (req, res) => {
+        const email = req.params.email;
+        console.log("email", email);
+        const result = await tuitionPostCollection
+          .find({
+            Email: email.toLowerCase() || email.toUpperCase(),
+            Status: "Approved",
+          })
+          .toArray();
 
-      res.send({ result });
-    });
+        res.send({ result });
+      }
+    );
 
     //Post New Tuition
-    app.post("/tuitionPost", verifyJWTToken, verifyStudent, async (req, res) => {
-      const data = req.body;
-      const result = await tuitionPostCollection.insertOne(data);
+    app.post(
+      "/tuitionPost",
+      verifyJWTToken,
+      verifyStudent,
+      async (req, res) => {
+        const data = req.body;
+        const result = await tuitionPostCollection.insertOne(data);
 
-      res.send({
-        success: true,
-        result,
-      });
-    });
+        res.send({
+          success: true,
+          result,
+        });
+      }
+    );
 
     // Update My-Tuitions Info by ID problem
-    app.put("/tuitionPost/:id", verifyJWTToken, verifyStudent, async (req, res) => {
-      const id = req.params.id;
+    app.put(
+      "/tuitionPost/:id",
+      verifyJWTToken,
+      verifyStudent,
+      async (req, res) => {
+        const id = req.params.id;
 
-      const updatedData = JSON.parse(
-        JSON.stringify({
-          Class: req.body.Class,
-          Subjects: req.body.Subjects,
-          Budget: req.body.Budget,
-          Location: req.body.Location,
-        })
-      );
+        const updatedData = JSON.parse(
+          JSON.stringify({
+            Class: req.body.Class,
+            Subjects: req.body.Subjects,
+            Budget: req.body.Budget,
+            Location: req.body.Location,
+          })
+        );
 
-      const result = await tuitionPostCollection.findOneAndUpdate(
-        { _id: new ObjectId(id) },
-        { $set: updatedData },
-        { returnDocument: "after" }
-      );
+        const result = await tuitionPostCollection.findOneAndUpdate(
+          { _id: new ObjectId(id) },
+          { $set: updatedData },
+          { returnDocument: "after" }
+        );
 
-      return res.send({
-        success: true,
-        message: "Tuition info updated successfully",
-        updatedInfo: result.value,
-      });
-    });
+        return res.send({
+          success: true,
+          message: "Tuition info updated successfully",
+          updatedInfo: result.value,
+        });
+      }
+    );
 
     //Delete Tuition Post
-    app.delete("/tuitionPost/:id", verifyJWTToken, verifyStudent, async (req, res) => {
-      const { id } = req.params;
-      const objectId = new ObjectId(id);
+    app.delete(
+      "/tuitionPost/:id",
+      verifyJWTToken,
+      verifyStudent,
+      async (req, res) => {
+        const { id } = req.params;
+        const objectId = new ObjectId(id);
 
-      const result = await tuitionPostCollection.deleteOne({ _id: objectId });
+        const result = await tuitionPostCollection.deleteOne({ _id: objectId });
 
-      res.send({
-        success: true,
-        result,
-      });
-    });
+        res.send({
+          success: true,
+          result,
+        });
+      }
+    );
 
     //Get Tutor's Application for my Tuition Post
-    app.get("/tuitionApplication/:email", verifyJWTToken, verifyStudent, async (req, res) => {
-      const email = req.params.email;
-      console.log("email", email);
-      const result = await tutorApplicationCollection
-        .find({ studentEmail: email.toLowerCase() || email.toUpperCase() })
-        .toArray();
+    app.get(
+      "/tuitionApplication/:email",
+      verifyJWTToken,
+      verifyStudent,
+      async (req, res) => {
+        const email = req.params.email;
+        console.log("email", email);
+        const result = await tutorApplicationCollection
+          .find({ studentEmail: email.toLowerCase() || email.toUpperCase() })
+          .toArray();
 
-      res.send({ result });
-    });
+        res.send({ result });
+      }
+    );
 
     //Payment API
     app.post("/create-checkout-session", async (req, res) => {
@@ -435,6 +516,7 @@ async function run() {
         customer_email: paymentInfo?.studentEmail,
         metadata: {
           studentEmail: paymentInfo?.studentEmail,
+          studentClass: paymentInfo?.studentClass,
           studentID: paymentInfo?.studentID,
           tutorID: paymentInfo?.tutorID,
           tutorEmail: paymentInfo?.tutorEmail,
@@ -473,7 +555,6 @@ async function run() {
           filter,
           updateStatus
         );
-        res.send(result);
       }
 
       const paymentInfo = {
@@ -481,6 +562,7 @@ async function run() {
         transactionID: transactionID,
         paymentStatus: Session.payment_status,
         studentID: Session.metadata.studentID,
+        studentClass: Session.metadata.studentClass,
         studentEmail: Session.metadata.studentEmail,
         tutorID: Session.metadata.tutorID,
         tutorEmail: Session.metadata.tutorEmail,
@@ -492,115 +574,150 @@ async function run() {
         res.send({ success: true, payResult });
       }
 
-      res.send({ message: "Status update failed" });
+      res.send({ message: "Payment failed" });
     });
 
     //Reject a Tutor API working
-    app.put("/statusUpdate/:id", verifyJWTToken, verifyStudent, async (req, res) => {
-      const id = req.params.id;
+    app.put(
+      "/statusUpdate/:id",
+      verifyJWTToken,
+      verifyStudent,
+      async (req, res) => {
+        const id = req.params.id;
 
-      const result = await tutorApplicationCollection.findOneAndUpdate(
-        { _id: new ObjectId(id) },
-        { $set: req.body },
-        { returnDocument: "after" }
-      );
+        const result = await tutorApplicationCollection.findOneAndUpdate(
+          { _id: new ObjectId(id) },
+          { $set: req.body },
+          { returnDocument: "after" }
+        );
 
-      return res.send({
-        success: true,
-        message: "Status updated successfully",
-        updatedInfo: result.value,
-      });
-    });
+        return res.send({
+          success: true,
+          message: "Status updated successfully",
+          updatedInfo: result.value,
+        });
+      }
+    );
 
     //Student Payment History API
-    app.get("/studentPayment/:email", verifyJWTToken, verifyStudent, async (req, res) => {
-      const email = req.params.email;
-      console.log("email", email);
-      const result = await paymentHistory
-        .find({ studentEmail: email.toLowerCase() || email.toUpperCase() })
-        .toArray();
+    app.get(
+      "/studentPayment/:email",
+      verifyJWTToken,
+      verifyStudent,
+      async (req, res) => {
+        const email = req.params.email;
+        console.log("email", email);
+        const result = await paymentHistory
+          .find({ studentEmail: email.toLowerCase() || email.toUpperCase() })
+          .toArray();
 
-      res.send({ result });
-    });
+        res.send({ result });
+      }
+    );
     //-----Student Functionalities End-----//
 
     //-----Tutor Functionalities Start-----//
     //Get My Tuitions
-    app.get("/tutorApplication/:email", verifyJWTToken, verifyTutor, async (req, res) => {
-      const email = req.params.email;
-      console.log("email", email);
-      const result = await tutorApplicationCollection
-        .find({ Email: email.toLowerCase() || email.toUpperCase() })
-        .toArray();
+    app.get(
+      "/tutorApplication/:email",
+      verifyJWTToken,
+      verifyTutor,
+      async (req, res) => {
+        const email = req.params.email;
+        console.log("email", email);
+        const result = await tutorApplicationCollection
+          .find({ Email: email.toLowerCase() || email.toUpperCase() })
+          .toArray();
 
-      res.send({ result });
-    });
+        res.send({ result });
+      }
+    );
 
     //Apply for tuition
-    app.post("/tutorApplication", verifyJWTToken, verifyTutor, async (req, res) => {
-      const data = req.body;
-      const result = await tutorApplicationCollection.insertOne(data);
+    app.post(
+      "/tutorApplication",
+      verifyJWTToken,
+      verifyTutor,
+      async (req, res) => {
+        const data = req.body;
+        const result = await tutorApplicationCollection.insertOne(data);
 
-      res.send({
-        success: true,
-        result,
-      });
-    });
+        res.send({
+          success: true,
+          result,
+        });
+      }
+    );
 
     // Update My-Application Info by ID
-    app.put("/tutorApplication/:id", verifyJWTToken, verifyTutor, async (req, res) => {
-      const id = req.params.id;
+    app.put(
+      "/tutorApplication/:id",
+      verifyJWTToken,
+      verifyTutor,
+      async (req, res) => {
+        const id = req.params.id;
 
-      const updatedData = JSON.parse(
-        JSON.stringify({
-          Qualification: req.body.Qualification,
-          Experience: req.body.Experience,
-          Expected_Salary: req.body.Expected_Salary,
-        })
-      );
+        const updatedData = JSON.parse(
+          JSON.stringify({
+            Qualification: req.body.Qualification,
+            Experience: req.body.Experience,
+            Expected_Salary: req.body.Expected_Salary,
+          })
+        );
 
-      const result = await tutorApplicationCollection.findOneAndUpdate(
-        { _id: new ObjectId(id) },
-        { $set: updatedData },
-        { returnDocument: "after" }
-      );
+        const result = await tutorApplicationCollection.findOneAndUpdate(
+          { _id: new ObjectId(id) },
+          { $set: updatedData },
+          { returnDocument: "after" }
+        );
 
-      return res.send({
-        success: true,
-        message: "Your Application info updated successfully",
-        updatedInfo: result.value,
-      });
-    });
+        return res.send({
+          success: true,
+          message: "Your Application info updated successfully",
+          updatedInfo: result.value,
+        });
+      }
+    );
 
     //Delete My Application
-    app.delete("/tutorApplication/:id", verifyJWTToken, verifyTutor, async (req, res) => {
-      const { id } = req.params;
-      const objectId = new ObjectId(id);
+    app.delete(
+      "/tutorApplication/:id",
+      verifyJWTToken,
+      verifyTutor,
+      async (req, res) => {
+        const { id } = req.params;
+        const objectId = new ObjectId(id);
 
-      const result = await tutorApplicationCollection.deleteOne({
-        _id: objectId,
-      });
+        const result = await tutorApplicationCollection.deleteOne({
+          _id: objectId,
+        });
 
-      res.send({
-        success: true,
-        result,
-      });
-    });
+        res.send({
+          success: true,
+          result,
+        });
+      }
+    );
 
     //Tutor's Revenue History
-    app.get("/tutorRevenue/:email", verifyJWTToken, verifyTutor, async (req, res) => {
-      const email = req.params.email;
-      console.log("email", email);
-      const result = await paymentHistory
-        .find({ tutorEmail: email.toLowerCase() || email.toUpperCase() })
-        .toArray();
+    app.get(
+      "/tutorRevenue/:email",
+      verifyJWTToken,
+      verifyTutor,
+      async (req, res) => {
+        const email = req.params.email;
+        console.log("email", email);
+        const result = await paymentHistory
+          .find({ tutorEmail: email.toLowerCase() || email.toUpperCase() })
+          .toArray();
 
-      if (result.length === 0) {
-        return res.status(404).send({ message: "No result found" });
+        if (result.length === 0) {
+          return res.status(404).send({ message: "No result found" });
+        }
+
+        res.send({ result });
       }
-
-      res.send({ result });
-    });
+    );
     //-----Tutor Functionalities End-----//
 
     // Send a ping to confirm a successful connection
