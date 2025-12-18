@@ -276,7 +276,7 @@ async function run() {
 
     //Dynamic-Tuition Post
     app.get("/dynamicTuitionPost", async (req, res) => {
-      const result = await tuitionPostCollection.find().limit(6).toArray();
+      const result = await tuitionPostCollection.find({Status: "Approved"}).limit(6).sort({Date: -1}).toArray();
       res.send(result);
     });
 
