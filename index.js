@@ -71,6 +71,16 @@ async function run() {
     });
 
     // Role Based Middleware
+    //Verify not Demo
+    const verifyNotDemo = (req, res, next) => {
+      if (req.user.role === "demo") {
+        return res.status(403).send({
+          message: "Demo users cannot perform this action",
+        });
+      }
+      next();
+    };
+
     //Admin
     const verifyADMIN = async (req, res, next) => {
       const email = req.user.email;
@@ -276,7 +286,11 @@ async function run() {
 
     //Dynamic-Tuition Post
     app.get("/dynamicTuitionPost", async (req, res) => {
-      const result = await tuitionPostCollection.find({Status: "Approved"}).limit(6).sort({Date: -1}).toArray();
+      const result = await tuitionPostCollection
+        .find({ Status: "Approved" })
+        .limit(8)
+        .sort({ Date: -1 })
+        .toArray();
       res.send(result);
     });
 
@@ -290,11 +304,16 @@ async function run() {
 
     //-----Admin Functionalities Start-----//
     //Get all User's info
-    app.get("/allUsers", verifyJWTToken, verifyADMIN, async (req, res) => {
-      const result = await userCollection.find().toArray();
+    app.get(
+      "/allUsers",
+      verifyJWTToken,
+      verifyADMIN,
+      async (req, res) => {
+        const result = await userCollection.find().toArray();
 
-      res.send(result);
-    });
+        res.send(result);
+      }
+    );
 
     //Get all Tuition-Post info
     app.get(
@@ -325,6 +344,7 @@ async function run() {
       "/postStatusUpdate/:id",
       verifyJWTToken,
       verifyADMIN,
+      verifyNotDemo,
       async (req, res) => {
         const id = req.params.id;
 
@@ -347,6 +367,7 @@ async function run() {
       "/updateUsers/:id",
       verifyJWTToken,
       verifyADMIN,
+      verifyNotDemo,
       async (req, res) => {
         const id = req.params.id;
 
@@ -380,6 +401,7 @@ async function run() {
       "/allUsers/:id",
       verifyJWTToken,
       verifyADMIN,
+      verifyNotDemo,
       async (req, res) => {
         const { id } = req.params;
         const objectId = new ObjectId(id);
